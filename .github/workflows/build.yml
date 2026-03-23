@@ -34,11 +34,20 @@ jobs:
       - name: Run tests
         run: python -m pytest tests/
 
+      - name: Build wheel
+        run: python setup.py bdist_wheel
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: quatch-bins-py${{ matrix.python-version }}-${{ runner.os }}
           path: quatch/bin/
+
+      - name: Upload wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: quatch-wheel-py${{ matrix.python-version }}-${{ runner.os }}
+          path: dist/*.whl
 
   build-windows:
     runs-on: windows-latest
