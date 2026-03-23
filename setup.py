@@ -43,12 +43,10 @@ class build_ext(_build_ext):
             from setuptools._distutils.ccompiler import new_compiler, CCompiler
             from setuptools._distutils.sysconfig import customize_compiler
 
-        compiler = new_compiler(
-            compiler=self.compiler,
-            verbose=self.verbose,
-            dry_run=self.dry_run,
-            force=self.force,
-        )
+        compiler = new_compiler(compiler=self.compiler)
+        compiler.verbose = self.verbose
+        compiler.dry_run = self.dry_run
+        compiler.force = self.force
         customize_compiler(compiler)
 
         macros = [("WIN32", None)] if WINDOWS else []
