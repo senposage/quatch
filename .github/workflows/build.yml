@@ -34,9 +34,11 @@ jobs:
       - name: Run tests
         run: python -m pytest tests/
 
+      # python -m build is used instead of `python setup.py bdist_wheel`
+      # because the latter is deprecated.
       - name: Build wheel
         if: matrix.python-version == '3.12'
-        run: python setup.py bdist_wheel
+        run: python -m build --no-isolation --wheel
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -49,6 +51,54 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: quatch-wheel-Linux
+          path: dist/*.whl
+
+  build-macos:
+    runs-on: macos-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install build dependencies
+        run: pip install setuptools wheel build pytest
+
+      - name: Build
+        run: python setup.py build_ext --inplace
+
+      - name: Install
+        run: pip install .
+
+      - name: Run tests
+        run: python -m pytest tests/
+
+      # python -m build is used instead of `python setup.py bdist_wheel`
+      # because the latter is deprecated.
+      - name: Build wheel
+        if: matrix.python-version == '3.12'
+        run: python -m build --no-isolation --wheel
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: quatch-bins-py${{ matrix.python-version }}-macOS
+          path: quatch/bin/
+
+      - name: Upload wheel
+        if: matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: quatch-wheel-macOS
           path: dist/*.whl
 
   build-windows:
