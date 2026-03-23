@@ -36,8 +36,12 @@ rcc = Extension(
 
 class build_ext(_build_ext):
     def run(self):
-        from distutils.ccompiler import new_compiler, CCompiler
-        from distutils.sysconfig import customize_compiler
+        try:
+            from distutils.ccompiler import new_compiler, CCompiler
+            from distutils.sysconfig import customize_compiler
+        except ImportError:
+            from setuptools._distutils.ccompiler import new_compiler, CCompiler
+            from setuptools._distutils.sysconfig import customize_compiler
 
         compiler = new_compiler(
             compiler=self.compiler,
