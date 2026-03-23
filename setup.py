@@ -102,7 +102,10 @@ try:
                 # with any windows version of python
                 return "py3", "none", "win32.win_amd64"
             else:
-                return super().get_tag()
+                # these are plain executables with no CPython ABI dependency,
+                # so the wheel works with any Python 3 on the same platform
+                _, _, plat = super().get_tag()
+                return "py3", "none", plat
 
     cmdclass["bdist_wheel"] = bdist_wheel
 except ImportError:
