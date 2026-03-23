@@ -38,3 +38,71 @@ jobs:
         with:
           name: quatch-bins-py${{ matrix.python-version }}-${{ runner.os }}
           path: quatch/bin/
+
+  build-windows:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install build dependencies
+        run: pip install setuptools wheel build pytest
+
+      # MinGW-W64 is pre-installed on windows-latest at C:\mingw64 (GCC 12.x).
+      # Chocolatey's 'mingw' package is GCC 8.1.0 (2018) and should only be
+      # used as a fallback if the pre-installed copy is absent.
+      - name: Add MinGW to PATH
+        run: |
+          if (Test-Path "C:\mingw64\bin") {
+            "C:\mingw64\bin" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
+          } else {
+            choco install mingw --no-progress -y
+          }
+
+      # setup.py is used directly (rather than `python -m build`) because
+      # build_ext --inplace is required to place the binaries in quatch/bin/
+      # before `pip install .` packages them, and --compiler=mingw32 must be
+      # passed so Git Bash-compatible MinGW executables are produced.
+      - name: Build with MinGW
+        run: python setup.py build_ext --inplace --compiler=mingw32
+
+      - name: Install
+        run: pip install .
+
+      - name: Run tests
+        run: python -m pytest tests/
+
+      - name: Upload binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: quatch-bins-py${{ matrix.python-version }}-Windows
+          path: quatch/bin/
+
+      # WINDOWS_HACK produces a py3-none-win32.win_amd64 wheel so the same
+      # MinGW-compiled .exe files are usable with any Python 3 version on
+      # Windows (including Git Bash).  Only built once to avoid name conflicts.
+      # build_ext --compiler=mingw32 is chained before bdist_wheel so that
+      # distutils propagates the compiler setting to bdist_wheel's internal
+      # build_ext invocation.
+      - name: Build Windows wheel
+        if: matrix.python-version == '3.12'
+        run: python setup.py build_ext --compiler=mingw32 bdist_wheel
+        env:
+          WINDOWS_HACK: "1"
+
+      - name: Upload Windows wheel
+        if: matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: quatch-wheel-Windows
+          path: dist/*.whl
